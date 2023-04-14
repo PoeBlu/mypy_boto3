@@ -86,9 +86,7 @@ def generate_method(
     yield "# pylint: disable=arguments-differ"
     yield f"def {method.name}("
     formatted_arguments = [first_arg]
-    for formatted_argument in format_arguments(method):
-        formatted_arguments.append(formatted_argument)
-
+    formatted_arguments.extend(iter(format_arguments(method)))
     for argument_index, formatted_argument in enumerate(formatted_arguments):
         comma = ","
         if argument_index == len(formatted_arguments) - 1:
@@ -100,8 +98,7 @@ def generate_method(
         yield "):"
 
     if include_doc:
-        docstring = clean_doc(method.docstring)
-        if docstring:
+        if docstring := clean_doc(method.docstring):
             yield '    """'
             for line in docstring.split("\n"):
                 yield f"    {line}"
@@ -393,10 +390,9 @@ def write_submodule(
     )
     init_import_records.update(client.get_import_records())
 
-    service_resource = process_service_resource(
+    if service_resource := process_service_resource(
         session, service_name, output_path, import_record_renderer
-    )
-    if service_resource:
+    ):
         init_import_records.update(service_resource.get_import_records())
 
     process_service_waiter(session, service_name, output_path, import_record_renderer)
@@ -414,16 +410,15 @@ def format_path(path: Path) -> None:
     logger.debug(f"Applying black formatting to {NicePath(path)}")
     for source_path in path.glob("**/*.py"):
         logger.debug(f"Reformatting {NicePath(source_path)}")
-        result = black_reformat(source_path)
-        if result:
+        if result := black_reformat(source_path):
             logger.debug(f"Reformatted {NicePath(source_path)}")
 
 
 def write_master_module(
     output_path: Path, service_names: Iterable[ServiceName]
 ) -> None:
-    logger.info(f"Writing master module")
-    logger.debug(f"Writing assets")
+    logger.info("Writing master module")
+    logger.debug("Writing assets")
 
     write_asset(output_path / "py.typed", "py.typed.template")
     write_asset(output_path / "__main__.py", "__main__.py.template")
@@ -445,7 +440,7 @@ def write_master_module(
                 service_install_string
             )
         else:
-            extras_require[f"all"].append(service_install_string)
+            extras_require["all"].append(service_install_string)
 
         if service_name.is_essential():
             if service_name.is_with_docs():
@@ -453,7 +448,7 @@ def write_master_module(
                     service_install_string
                 )
             else:
-                extras_require[f"essential"].append(service_install_string)
+                extras_require["essential"].append(service_install_string)
 
     write_asset(
         output_path.parent / "setup.py",

@@ -44,13 +44,13 @@ logger = get_logger()
 
 def get_resource_public_actions(resource_class: Resource) -> Dict[str, Any]:
     resource_class_members = inspect.getmembers(resource_class)
-    resource_methods = {}
-    for name, member in resource_class_members:
-        if not name.startswith("_"):
-            if not name[0].isupper():
-                if is_resource_action(member):
-                    resource_methods[name] = member
-    return resource_methods
+    return {
+        name: member
+        for name, member in resource_class_members
+        if not name.startswith("_")
+        and not name[0].isupper()
+        and is_resource_action(member)
+    }
 
 
 def manually_set_method(name: str) -> Method:
@@ -81,10 +81,11 @@ def manually_set_method(name: str) -> Method:
 
 
 def parse_arguments(parsed_doc: Docstring) -> Generator[Argument, None, None]:
-    types_map = {}
-    for meta_item in parsed_doc.meta:
-        if meta_item.args[0] == "type":
-            types_map[meta_item.args[1]] = parse_type_from_str(meta_item.description)
+    types_map = {
+        meta_item.args[1]: parse_type_from_str(meta_item.description)
+        for meta_item in parsed_doc.meta
+        if meta_item.args[0] == "type"
+    }
     for arg in parsed_doc.params:
         yield Argument(
             arg.arg_name,
@@ -96,8 +97,8 @@ def parse_arguments(parsed_doc: Docstring) -> Generator[Argument, None, None]:
 def parse_attributes(
     resource: Boto3ServiceResource,
 ) -> Generator[Attribute, None, None]:
-    service_model = resource.meta.client.meta.service_model
     if resource.meta.resource_model.shape:
+        service_model = resource.meta.client.meta.service_model
         shape = service_model.shape_for(resource.meta.resource_model.shape)
         attributes = resource.meta.resource_model.get_attributes(shape)
         for name, attribute in attributes.items():
@@ -161,12 +162,8 @@ def parse_resource(resource: Boto3ServiceResource) -> Resource:
 
     methods = list(parse_methods(get_resource_public_actions(resource.__class__)))
 
-    attributes: List[Attribute] = []
-    for attribute in parse_attributes(resource):
-        attributes.append(attribute)
-    for attribute in parse_identifiers(resource):
-        attributes.append(attribute)
-
+    attributes: List[Attribute] = list(parse_attributes(resource))
+    attributes.extend(iter(parse_identifiers(resource)))
     collections = list(parse_collections(resource))
 
     return Resource(
@@ -196,18 +193,16 @@ def parse_service_resource(
 
     methods = list(parse_methods(get_instance_public_methods(service_resource)))
 
-    attributes: List[Attribute] = []
-    for attribute in parse_attributes(service_resource):
-        attributes.append(attribute)
-    for attribute in parse_identifiers(service_resource):
-        attributes.append(attribute)
-
+    attributes: List[Attribute] = list(parse_attributes(service_resource))
+    attributes.extend(iter(parse_identifiers(service_resource)))
     collections = list(parse_collections(service_resource))
 
-    sub_resources = []
-    for sub_resource in retrieve_sub_resources(session, service_name, service_resource):
-        sub_resources.append(parse_resource(sub_resource))
-
+    sub_resources = [
+        parse_resource(sub_resource)
+        for sub_resource in retrieve_sub_resources(
+            session, service_name, service_resource
+        )
+    ]
     return ServiceResource(
         service_name=service_name,
         docstring=clean_doc(getdoc(service_resource)),
@@ -229,10 +224,11 @@ def parse_service_waiter(
     session: Session, service_name: ServiceName
 ) -> Optional[ServiceWaiter]:
     client = session.client(service_name.boto3_name)
-    if not client.waiter_names:
-        return None
-
-    return ServiceWaiter(service_name, list(parse_waiters(client)))
+    return (
+        ServiceWaiter(service_name, list(parse_waiters(client)))
+        if client.waiter_names
+        else None
+    )
 
 
 def parse_waiters(client: BaseClient) -> Generator[Waiter, None, None]:
@@ -309,7 +305,5 @@ def retrieve_sub_resources(
             ),
         )
         identifiers = cls.meta.resource_model.identifiers
-        args = []
-        for _ in identifiers:
-            args.append("foo")
+        args = ["foo" for _ in identifiers]
         yield cls(*args, client=session.client(service_name.boto3_name))

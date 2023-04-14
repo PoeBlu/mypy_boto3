@@ -21,7 +21,4 @@ class ImportRecordType(enum.Enum):
         ]
 
     def get_comment(self) -> str:
-        if self == self.local:
-            return "pylint: disable=import-self"
-
-        return ""
+        return "pylint: disable=import-self" if self == self.local else ""

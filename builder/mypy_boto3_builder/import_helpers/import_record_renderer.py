@@ -31,19 +31,22 @@ class ImportRecordRenderer:
             if import_record.source.startswith(local_import_string):
                 return ImportRecordType.local
 
-        for boto_import_string in self.boto_import_strings:
-            if import_record.source.startswith(boto_import_string):
-                return ImportRecordType.boto
-
-        return ImportRecordType.python
+        return next(
+            (
+                ImportRecordType.boto
+                for boto_import_string in self.boto_import_strings
+                if import_record.source.startswith(boto_import_string)
+            ),
+            ImportRecordType.python,
+        )
 
     def generate_lines(
         self, type_annotations: Iterable[FakeAnnotation] = (),
     ) -> Generator[str, None, None]:
-        import_records: Set[ImportRecord] = set()
-        for type_annotation in type_annotations:
-            import_records.add(type_annotation.get_import_record())
-
+        import_records: Set[ImportRecord] = {
+            type_annotation.get_import_record()
+            for type_annotation in type_annotations
+        }
         import_records.update(self.common_import_records)
 
         typed_import_records: Dict[ImportRecordType, Set[ImportRecord]] = {
@@ -59,8 +62,7 @@ class ImportRecordRenderer:
                 continue
 
             for import_string in sorted(typed_import_records[import_record_type]):
-                comment = import_record_type.get_comment()
-                if comment:
+                if comment := import_record_type.get_comment():
                     yield f"# {comment}"
                 yield import_string.render()
             yield ""

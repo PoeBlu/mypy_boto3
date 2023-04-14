@@ -14,9 +14,9 @@ class ImportRecord:
         self.alias = alias
 
     def __str__(self) -> str:
-        if self.name and self.alias:
-            return f"from {self.source} import {self.name} as {self.alias}"
         if self.name:
+            if self.alias:
+                return f"from {self.source} import {self.name} as {self.alias}"
             return f"from {self.source} import {self.name}"
         if self.alias:
             return f"import {self.source} as {self.alias}"

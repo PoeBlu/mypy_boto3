@@ -120,14 +120,13 @@ class ServiceResource:
     sub_resources: List[Resource]
 
     def get_types(self) -> Set[FakeAnnotation]:
-        types: Set[FakeAnnotation] = set()
-        types.add(
+        types: Set[FakeAnnotation] = {
             ExternalImport(
                 source="boto3.resources.base",
                 name="ServiceResource",
                 alias="Boto3ServiceResource",
             )
-        )
+        }
         types.add(TypeAnnotation(ResourceCollection))
         for method in self.methods:
             types.update(method.get_types())
@@ -145,10 +144,9 @@ class ServiceResource:
         return types
 
     def get_import_records(self) -> Set[ImportRecord]:
-        import_records: Set[ImportRecord] = set()
         source = f"{MODULE_NAME}_{self.service_name.name}.service_resource"
 
-        import_records.add(ImportRecord(source, "ServiceResource"))
+        import_records: Set[ImportRecord] = {ImportRecord(source, "ServiceResource")}
         for resource in self.sub_resources:
             import_records.add(ImportRecord(source, resource.name))
 
@@ -168,8 +166,7 @@ class Client:
     methods: List[Method]
 
     def get_types(self) -> Set[FakeAnnotation]:
-        types: Set[FakeAnnotation] = set()
-        types.add(TypeAnnotation(BaseClient))
+        types: Set[FakeAnnotation] = {TypeAnnotation(BaseClient)}
         for method in self.methods:
             types.update(method.get_types())
 
@@ -190,8 +187,7 @@ class ServiceWaiter:
     waiters: List[Waiter]
 
     def get_types(self) -> Set[FakeAnnotation]:
-        types: Set[FakeAnnotation] = set()
-        types.add(TypeAnnotation(Boto3Waiter))
+        types: Set[FakeAnnotation] = {TypeAnnotation(Boto3Waiter)}
         for waiter in self.waiters:
             types.update(waiter.get_types())
 
@@ -202,12 +198,11 @@ class ServiceWaiter:
         return types
 
     def get_import_records(self) -> Set[ImportRecord]:
-        import_records: Set[ImportRecord] = set()
         source = f"{MODULE_NAME}_{self.service_name.name}.waiter"
 
-        for waiter in self.waiters:
-            import_records.add(ImportRecord(source, waiter.name))
-
+        import_records: Set[ImportRecord] = {
+            ImportRecord(source, waiter.name) for waiter in self.waiters
+        }
         return import_records
 
 
@@ -217,8 +212,7 @@ class ServicePaginator:
     paginators: List[Paginator]
 
     def get_types(self) -> Set[FakeAnnotation]:
-        types: Set[FakeAnnotation] = set()
-        types.add(TypeAnnotation(Boto3Paginator))
+        types: Set[FakeAnnotation] = {TypeAnnotation(Boto3Paginator)}
         for paginator in self.paginators:
             types.update(paginator.get_types())
 
@@ -229,10 +223,9 @@ class ServicePaginator:
         return types
 
     def get_import_records(self) -> Set[ImportRecord]:
-        import_records: Set[ImportRecord] = set()
         source = f"{MODULE_NAME}_{self.service_name.name}.paginator"
 
-        for paginator in self.paginators:
-            import_records.add(ImportRecord(source, paginator.name))
-
+        import_records: Set[ImportRecord] = {
+            ImportRecord(source, paginator.name) for paginator in self.paginators
+        }
         return import_records

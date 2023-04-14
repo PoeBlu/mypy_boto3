@@ -412,10 +412,11 @@ class ServiceName(enum.Enum):
 
     @property
     def fallback(self) -> ServiceName:
-        if not self.is_with_docs():
-            return self
-
-        return ServiceName(str(self.value).replace(WITH_DOCS_PYPI_POSTFIX, ""))
+        return (
+            ServiceName(str(self.value).replace(WITH_DOCS_PYPI_POSTFIX, ""))
+            if self.is_with_docs()
+            else self
+        )
 
     @property
     def import_name(self) -> str:
